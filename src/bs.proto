@@ -1,0 +1,31 @@
+syntax = "proto3";
+package bs;
+
+enum BsResErr {
+    NO_ERR = 0;
+    AUTH_FAILED = 1;
+    TARGET_CONNECT_ERR = 2;
+};
+
+enum AType {
+    ATYP_NONE = 0;
+    IP_V4 = 1;
+    DOMAINAME = 3;
+    IP_V6 = 4;
+}
+
+message BsRequest {
+    string passwd = 1;
+    AType atyp = 2;
+    bytes target_addr = 3;
+    int32 target_port = 4;
+    uint64 logid = 6;
+};
+
+message BsResponse {
+    BsResErr err_no = 1;
+    string err_msg = 2;
+    AType atyp = 3;
+    bytes target_addr = 4;
+    int32 target_port = 5;
+};

@@ -13,6 +13,8 @@
 namespace bs {
 
 /*
+ * TCP-based client
+ *
  * authentication request
  *    +----+----------+----------+
  *    |VER | NMETHODS | METHODS  |
@@ -41,6 +43,17 @@ namespace bs {
  *    +----+-----+-------+------+----------+----------+
  *    | 1  |  1  | X'00' |  1   | Variable |    2     |
  *    +----+-----+-------+------+----------+----------+
+ *
+ *
+ *  UDP-based client
+ *
+ *  Socks5 request/response
+ *  +----+------+------+----------+----------+----------+
+ *  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT |   DATA   |
+ *  +----+------+------+----------+----------+----------+
+ *  | 2  |  1   |  1   | Variable |    2     | Variable |
+ *  +----+------+------+----------+----------+----------+
+ *
 */
 
 int Socks5::auth_process(const char* data, size_t len) {
@@ -81,7 +94,7 @@ int Socks5::try_parse_auth(const char* data, size_t len) {
     if (len < 3) {
         return -1;
     }
-//    uint8_t ver = data[0];
+    // uint8_t ver = data[0];
     uint8_t nmethods = data[1];
 
     if (len - 2 < nmethods) {
@@ -151,7 +164,7 @@ int Socks5::req_process(const char *data, size_t len) {
         return -1;
     }
 
-    _atyp = (ATYP)data[3];
+    _atyp = static_cast<ATYP>(data[3]);
     if (_atyp != IP_V4 && _atyp != DOMAINAME && _atyp != IP_V6) {
         LOG(ERROR) << "[Socks5::req_process] _=" << _atyp
             << ", error atyp in socks5 request";
@@ -168,8 +181,7 @@ int Socks5::req_process(const char *data, size_t len) {
         _target_addr.append(&data[offset], 4);
         offset += 4;
     } else if (_atyp == DOMAINAME) {
-        uint8_t domain_len = data[4];
-        offset += 1;
+        uint8_t domain_len = data[offset++];
         _target_addr.append(&data[offset], domain_len);
         offset += domain_len;
     } else if (_atyp == IP_V6) {
@@ -241,4 +253,70 @@ std::string Socks5::addr_to_string() {
     }
     return addr_str;
 }
+
+int Socks5::process_udp_req(const char* data, size_t len) {
+    if (len < 10) {
+        LOG(ERROR) << "[Socks5::process_udp_req][logid:" << _logid
+           << "][read_len:" << len << "] read len < 10";
+        return -1;
+    }
+    if (data[0] != 0 || data[1] != 0 || data[2] != 0) {
+        LOG(ERROR) << "[Socks5::process_udp_req][logid:" << _logid
+            << "] first three bytes != 0";
+        return -1;
+    }
+
+    _atyp = static_cast<ATYP>(data[3]);
+    int offset = 4;
+    if (_atyp == IP_V4) {
+        _target_addr.append(&data[offset], 4);
+        offset += 4;
+    } else if (_atyp == DOMAINAME) {
+        uint8_t dns_len = data[offset++];
+        if (len < 7 + dns_len) {
+            LOG(ERROR) << "[Socks5::process_udp_req][logid:" << _logid
+               << "][read_len:" << len << "] dns len not enough";
+            return -1;
+        }
+        _target_addr.append(&data[offset], dns_len);
+        offset += dns_len;
+
+    } else if (_atyp == IP_V6) {
+        if (len < 22) {
+            LOG(ERROR) << "[Socks5::process_udp_req][logid:" << _logid
+               << "][read_len:" << len << "] IP_V6 len not enough";
+            return -1;
+        }
+        _target_addr.append(&data[offset], 16);
+        offset += 16;
+    } else {
+        LOG(ERROR) << "[Socks5::process_udp_req][logid:" << _logid
+           << "][atyp:" << _atyp << "] atyp value error";
+        return -1;
+
+    }
+
+    _target_port |= ((uint8_t)data[offset] << 8);
+    _target_port |= (uint8_t)data[offset+1];
+    offset += 2;
+
+    return offset;
+}
+
+int Socks5::udp_response(std::string &res, const std::string &udp_data) {
+    res.clear();
+
+    res.append(3, 0x0);
+    res.push_back(_real_atyp);
+    if (_real_atyp == DOMAINAME) {
+        res.push_back(_real_target_addr.size());
+    }
+    res.append(_real_target_addr.data(), _real_target_addr.size());
+    res.push_back((_real_target_port >> 8) & 0xff);
+    res.push_back(_real_target_port & 0xff);
+    res.append(udp_data.data(), udp_data.size());
+
+    return 0;
+}
+
 }

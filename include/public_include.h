@@ -21,7 +21,8 @@
 
 #include "boost/asio.hpp"
 
-static const size_t DEFAULT_BUFF_SIZE = 10240;
+static const size_t DEFAULT_BUFF_SIZE = 32 * 1024;
+static const size_t UDP_BUFF_SIZE = 65536;
 
 static const uint8_t PARAM_PACKAGE = 0x1;
 

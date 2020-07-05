@@ -30,9 +30,10 @@ public:
         ADDRESS_TYPE_NOT_SUPPORTED = 8
     };
 
-    Socks5() : _target_port(0), _auth_method(NO_AUTHEN), _cmd(CONNECT),
-               _atyp(DOMAINAME), _rep(SUCCEEDED),
-               _real_atyp(DOMAINAME), _real_target_port(0) {}
+    // TODO add logid in socks5
+    explicit Socks5(uint64_t logid) : _logid(logid), _target_port(0), _auth_method(NO_AUTHEN),
+                _cmd(CONNECT), _atyp(DOMAINAME), _rep(SUCCEEDED),
+                _real_atyp(DOMAINAME), _real_target_port(0) {}
 
     ATYP atyp() {
         return _atyp;
@@ -65,7 +66,10 @@ public:
     int req_response(std::string& cnt);
 
     std::string addr_to_string();
-private:
+
+    int process_udp_req(const char* data, size_t len);
+
+    int udp_response(std::string& res, const std::string& udp_data);
 
 private:
     enum AuthMethod {
@@ -84,6 +88,7 @@ private:
     };
 
 
+    uint64_t _logid;
     AuthMethod _auth_method;
     CMD _cmd;
     ATYP _atyp;

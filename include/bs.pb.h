@@ -232,6 +232,7 @@ class BsRequest :
   enum : int {
     kPasswdFieldNumber = 1,
     kTargetAddrFieldNumber = 3,
+    kUdpDataFieldNumber = 7,
     kAtypFieldNumber = 2,
     kTargetPortFieldNumber = 4,
     kLogidFieldNumber = 6,
@@ -268,6 +269,22 @@ class BsRequest :
   std::string* _internal_mutable_target_addr();
   public:
 
+  // bytes udp_data = 7;
+  void clear_udp_data();
+  const std::string& udp_data() const;
+  void set_udp_data(const std::string& value);
+  void set_udp_data(std::string&& value);
+  void set_udp_data(const char* value);
+  void set_udp_data(const void* value, size_t size);
+  std::string* mutable_udp_data();
+  std::string* release_udp_data();
+  void set_allocated_udp_data(std::string* udp_data);
+  private:
+  const std::string& _internal_udp_data() const;
+  void _internal_set_udp_data(const std::string& value);
+  std::string* _internal_mutable_udp_data();
+  public:
+
   // .bs.AType atyp = 2;
   void clear_atyp();
   ::bs::AType atyp() const;
@@ -302,6 +319,7 @@ class BsRequest :
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr passwd_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr target_addr_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr udp_data_;
   int atyp_;
   ::PROTOBUF_NAMESPACE_ID::int32 target_port_;
   ::PROTOBUF_NAMESPACE_ID::uint64 logid_;
@@ -418,6 +436,7 @@ class BsResponse :
   enum : int {
     kErrMsgFieldNumber = 2,
     kTargetAddrFieldNumber = 4,
+    kUdpDataFieldNumber = 6,
     kErrNoFieldNumber = 1,
     kAtypFieldNumber = 3,
     kTargetPortFieldNumber = 5,
@@ -454,6 +473,22 @@ class BsResponse :
   std::string* _internal_mutable_target_addr();
   public:
 
+  // bytes udp_data = 6;
+  void clear_udp_data();
+  const std::string& udp_data() const;
+  void set_udp_data(const std::string& value);
+  void set_udp_data(std::string&& value);
+  void set_udp_data(const char* value);
+  void set_udp_data(const void* value, size_t size);
+  std::string* mutable_udp_data();
+  std::string* release_udp_data();
+  void set_allocated_udp_data(std::string* udp_data);
+  private:
+  const std::string& _internal_udp_data() const;
+  void _internal_set_udp_data(const std::string& value);
+  std::string* _internal_mutable_udp_data();
+  public:
+
   // .bs.BsResErr err_no = 1;
   void clear_err_no();
   ::bs::BsResErr err_no() const;
@@ -488,6 +523,7 @@ class BsResponse :
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr err_msg_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr target_addr_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr udp_data_;
   int err_no_;
   int atyp_;
   ::PROTOBUF_NAMESPACE_ID::int32 target_port_;
@@ -685,6 +721,66 @@ inline void BsRequest::set_logid(::PROTOBUF_NAMESPACE_ID::uint64 value) {
   // @@protoc_insertion_point(field_set:bs.BsRequest.logid)
 }
 
+// bytes udp_data = 7;
+inline void BsRequest::clear_udp_data() {
+  udp_data_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline const std::string& BsRequest::udp_data() const {
+  // @@protoc_insertion_point(field_get:bs.BsRequest.udp_data)
+  return _internal_udp_data();
+}
+inline void BsRequest::set_udp_data(const std::string& value) {
+  _internal_set_udp_data(value);
+  // @@protoc_insertion_point(field_set:bs.BsRequest.udp_data)
+}
+inline std::string* BsRequest::mutable_udp_data() {
+  // @@protoc_insertion_point(field_mutable:bs.BsRequest.udp_data)
+  return _internal_mutable_udp_data();
+}
+inline const std::string& BsRequest::_internal_udp_data() const {
+  return udp_data_.GetNoArena();
+}
+inline void BsRequest::_internal_set_udp_data(const std::string& value) {
+  
+  udp_data_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+}
+inline void BsRequest::set_udp_data(std::string&& value) {
+  
+  udp_data_.SetNoArena(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:bs.BsRequest.udp_data)
+}
+inline void BsRequest::set_udp_data(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  udp_data_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:bs.BsRequest.udp_data)
+}
+inline void BsRequest::set_udp_data(const void* value, size_t size) {
+  
+  udp_data_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:bs.BsRequest.udp_data)
+}
+inline std::string* BsRequest::_internal_mutable_udp_data() {
+  
+  return udp_data_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline std::string* BsRequest::release_udp_data() {
+  // @@protoc_insertion_point(field_release:bs.BsRequest.udp_data)
+  
+  return udp_data_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline void BsRequest::set_allocated_udp_data(std::string* udp_data) {
+  if (udp_data != nullptr) {
+    
+  } else {
+    
+  }
+  udp_data_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), udp_data);
+  // @@protoc_insertion_point(field_set_allocated:bs.BsRequest.udp_data)
+}
+
 // -------------------------------------------------------------------
 
 // BsResponse
@@ -867,6 +963,66 @@ inline void BsResponse::_internal_set_target_port(::PROTOBUF_NAMESPACE_ID::int32
 inline void BsResponse::set_target_port(::PROTOBUF_NAMESPACE_ID::int32 value) {
   _internal_set_target_port(value);
   // @@protoc_insertion_point(field_set:bs.BsResponse.target_port)
+}
+
+// bytes udp_data = 6;
+inline void BsResponse::clear_udp_data() {
+  udp_data_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline const std::string& BsResponse::udp_data() const {
+  // @@protoc_insertion_point(field_get:bs.BsResponse.udp_data)
+  return _internal_udp_data();
+}
+inline void BsResponse::set_udp_data(const std::string& value) {
+  _internal_set_udp_data(value);
+  // @@protoc_insertion_point(field_set:bs.BsResponse.udp_data)
+}
+inline std::string* BsResponse::mutable_udp_data() {
+  // @@protoc_insertion_point(field_mutable:bs.BsResponse.udp_data)
+  return _internal_mutable_udp_data();
+}
+inline const std::string& BsResponse::_internal_udp_data() const {
+  return udp_data_.GetNoArena();
+}
+inline void BsResponse::_internal_set_udp_data(const std::string& value) {
+  
+  udp_data_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+}
+inline void BsResponse::set_udp_data(std::string&& value) {
+  
+  udp_data_.SetNoArena(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:bs.BsResponse.udp_data)
+}
+inline void BsResponse::set_udp_data(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  udp_data_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:bs.BsResponse.udp_data)
+}
+inline void BsResponse::set_udp_data(const void* value, size_t size) {
+  
+  udp_data_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:bs.BsResponse.udp_data)
+}
+inline std::string* BsResponse::_internal_mutable_udp_data() {
+  
+  return udp_data_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline std::string* BsResponse::release_udp_data() {
+  // @@protoc_insertion_point(field_release:bs.BsResponse.udp_data)
+  
+  return udp_data_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline void BsResponse::set_allocated_udp_data(std::string* udp_data) {
+  if (udp_data != nullptr) {
+    
+  } else {
+    
+  }
+  udp_data_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), udp_data);
+  // @@protoc_insertion_point(field_set_allocated:bs.BsResponse.udp_data)
 }
 
 #ifdef __GNUC__

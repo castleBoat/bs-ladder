@@ -11,6 +11,7 @@ DECLARE_string(passwd);
 namespace bs {
 
 using boost::asio::ip::tcp;
+using boost::asio::ip::udp;
 using std::placeholders::_1;
 using std::placeholders::_2;
 
@@ -59,6 +60,8 @@ private:
 
     std::string addr_to_string();
 
+    void close_socket();
+
 private:
     enum RemoteSessionState {
         SOCKS_AUTH = 0,
@@ -78,7 +81,7 @@ private:
     tcp::socket _target_socket;
     tcp::endpoint _target_ep;
     RemoteSessionState _state;
-    std::shared_ptr<RemoteSession> _self_container;
+    // std::shared_ptr<RemoteSession> _self_container;
 
     bs::AType _target_atyp;
     std::string _target_addr;
@@ -101,7 +104,7 @@ private:
 };
 
 int RemoteSession::start() {
-    _self_container = shared_from_this();
+    // _self_container = shared_from_this();
 
     do_local_read();
     return 0;
@@ -113,7 +116,7 @@ void RemoteSession::local_read_handle(boost::system::error_code ec, std::size_t 
             << "][ec:" << ec.message()
             << "][client:" << _client_ep.address().to_string()
             << "] read local socket failed";
-        // _self_container.reset();
+        close_socket();
         return;
     }
 
@@ -167,7 +170,6 @@ void RemoteSession::local_read_handle(boost::system::error_code ec, std::size_t 
     LOG(INFO) << "[RemoteSession::local_read_handle][logid:" << _logid
         << "][processed_len:" << processed_len << "]";
     if (ret != 0) {
-        // _self_container.reset();
         return;
     }
 
@@ -270,7 +272,7 @@ int RemoteSession::connect_target() {
               << "] async connecting";
 
     _target_socket.async_connect(target_ep,
-            std::bind(&RemoteSession::connect_target_handle, this, _1));
+            std::bind(&RemoteSession::connect_target_handle, shared_from_this(), _1));
 
     _target_ep = target_ep;
 
@@ -281,6 +283,7 @@ void RemoteSession::connect_target_handle(boost::system::error_code ec) {
     if (ec) {
         LOG(ERROR) << "[RemoteSession::connect_target_handle][ec:" << ec.message()
             << "][target:" << addr_to_string() << "] fail to connect";
+        close_socket();
         return;
     }
 
@@ -293,28 +296,29 @@ void RemoteSession::connect_target_handle(boost::system::error_code ec) {
 
 void RemoteSession::do_local_read() {
     _socket.async_read_some(boost::asio::buffer(&_local_read_buff[_local_read_len], _local_read_buff.size() - _local_read_len),
-            std::bind(&RemoteSession::local_read_handle, this, _1, _2));
+            std::bind(&RemoteSession::local_read_handle, shared_from_this(), _1, _2));
 }
 
 void RemoteSession::do_local_write() {
     _socket.async_write_some(boost::asio::buffer(_local_write_buff.data(), _local_write_buff.size()),
-            std::bind(&RemoteSession::local_write_handle, this, _1, _2));
+            std::bind(&RemoteSession::local_write_handle, shared_from_this(), _1, _2));
 }
 
 void RemoteSession::do_target_read() {
     _target_socket.async_read_some(boost::asio::buffer(&_target_read_buff[_target_read_len], _target_read_buff.size() - _target_read_len),
-                        std::bind(&RemoteSession::target_read_handle, this, _1, _2));
+                        std::bind(&RemoteSession::target_read_handle, shared_from_this(), _1, _2));
 }
 
 void RemoteSession::do_target_write() {
     _target_socket.async_write_some(boost::asio::buffer(_target_write_buff.data(), _target_write_buff.size()),
-            std::bind(&RemoteSession::target_write_handle, this, _1, _2));
+            std::bind(&RemoteSession::target_write_handle, shared_from_this(), _1, _2));
 }
 
 void RemoteSession::local_write_handle(boost::system::error_code ec, std::size_t len) {
     if (ec) {
         LOG(ERROR) << "[RemoteSession::local_write_handle][logid:" << _logid
             << "][ec:" << ec.message() << "] fail to write to client";
+        close_socket();
         return;
     }
     LOG(INFO) << "[RemoteSession::local_write_handle][logid:" << _logid
@@ -370,7 +374,7 @@ void RemoteSession::target_read_handle(boost::system::error_code ec, size_t len)
     if (ec) {
         LOG(ERROR) << "[RemoteSession::target_read_handle][logid:" << _logid
             << "][ec:" << ec.message() << "] target socket error";
-        // _self_container.reset();
+        close_socket();
         return;
     }
 
@@ -388,6 +392,7 @@ void RemoteSession::target_write_handle(boost::system::error_code ec, size_t len
     if (ec) {
         LOG(ERROR) << "[RemoteSession::target_write_handle][logid:" << _logid
             << "][ec:" << ec.message() << "] fail to write target";
+        close_socket();
         return;
     }
     LOG(INFO) << "[RemoteSession::target_write_handle][logid:" << _logid
@@ -426,10 +431,206 @@ std::string RemoteSession::addr_to_string() {
     return addr_str;
 }
 
-RemoteServer RemoteServer::_s_instance;
+void RemoteSession::close_socket() {
+    _socket.close();
+    _target_socket.close();
+    // _self_container.reset();
+}
+
+class UdpRemoteSession : public std::enable_shared_from_this<UdpRemoteSession> {
+public:
+    UdpRemoteSession(udp::socket* local_socket, boost::asio::io_context* io_context,
+                udp::endpoint& local_ep, std::string data, size_t len) :
+            _local_socket(local_socket), _local_ep(local_ep), _local_buff(std::move(data)), _read_len(len),
+            _target_socket(*io_context), _io_context(io_context), _logid(0) {
+        _target_buff.reserve(UDP_BUFF_SIZE);
+    }
+
+    void start();
+
+private:
+    int parse_request();
+
+    int send_to_target();
+
+    void do_target_write();
+
+    void target_write_handle(boost::system::error_code ec, size_t len);
+
+    void do_target_read();
+
+    void target_read_handle(boost::system::error_code ec, size_t len);
+
+    int send_to_local(size_t len);
+
+    void do_local_write();
+
+    void local_write_handle(boost::system::error_code ec, size_t len);
+
+    void close_socket();
+private:
+    udp::socket* _local_socket;
+    udp::endpoint _local_ep;
+    std::string  _local_buff;
+    size_t  _read_len;
+    bs::BsRequest _req;
+
+    udp::socket _target_socket;
+    udp::endpoint _target_ep;
+    std::string _target_buff;
+
+    // std::shared_ptr<UdpRemoteSession> _self_container;
+    boost::asio::io_context* _io_context;
+    uint64_t _logid;
+
+};
+
+void UdpRemoteSession::start() {
+    int ret = parse_request();
+    if (0 != ret) {
+        // TODO response err msg
+        return;
+    }
+
+    ret = send_to_target();
+    if (0 != ret) {
+        return;
+    }
+}
+
+int UdpRemoteSession::parse_request() {
+    if (!_req.ParseFromArray(_local_buff.data(), _read_len)) {
+        LOG(ERROR) << "[UdpRemoteSession::parse_request][logid:" << _logid
+                   << "] fail to pb deserialize";
+        return -1;
+    }
+
+    _logid = _req.logid();
+    if (_req.passwd() != FLAGS_passwd) {
+        LOG(ERROR) << "[UdpRemoteSession::parse_request][logid:" << _logid
+                   << "][passwd:" << _req.passwd() << "] wrong passwd";
+        return -1;
+    }
+
+    return 0;
+}
+
+int UdpRemoteSession::send_to_target() {
+    if (bs::IP_V4 == _req.atyp()) {
+        boost::asio::ip::address_v4::bytes_type n_v4_bytes;
+        memcpy(n_v4_bytes.data(), _req.target_addr().data(), 4);
+        boost::asio::ip::address_v4 addr(n_v4_bytes);
+        _target_ep = udp::endpoint(boost::asio::ip::address(addr), _req.target_port());
+    } else if (bs::IP_V6 == _req.atyp()) {
+        boost::asio::ip::address_v6::bytes_type n_v6_bytes;
+        memcpy(n_v6_bytes.data(), _req.target_addr().data(), 16);
+        boost::asio::ip::address_v6 addr(n_v6_bytes);
+        _target_ep = udp::endpoint(boost::asio::ip::address(addr), _req.target_port());
+    } else {
+        // TODO dns query here may exists some problems
+        udp::resolver resolver(*_io_context);
+        if (_req.target_port() == 80) {
+            _target_ep = resolver.resolve(_req.target_addr(), "http").begin()->endpoint();
+        } else if (_req.target_port() == 443) {
+            _target_ep = resolver.resolve(_req.target_addr(), "https").begin()->endpoint();
+        } else {
+            LOG(ERROR) << "[send_to_target][logid:" << _logid
+                       << "][target addr:" << _req.target_addr() << "][port:" << _req.target_port()
+                       << "] port != 80 && port != 443fail to dns query";
+        }
+    }
+
+    do_target_write();
+    return 0;
+}
+
+void UdpRemoteSession::do_target_write() {
+    _target_socket.async_send_to(boost::asio::buffer(_req.udp_data().data(), _req.udp_data().size()),
+            _target_ep, std::bind(&UdpRemoteSession::target_write_handle, shared_from_this(), _1, _2));
+}
+
+void UdpRemoteSession::target_write_handle(boost::system::error_code ec, size_t len) {
+    if (ec) {
+        LOG(ERROR) << "[UdpRemoteSession::target_write_handle][logid:" << _logid
+                   << "][ec:" << ec.message() << "] fail to write to target";
+        close_socket();
+        return;
+    }
+
+    do_target_read();
+}
+
+void UdpRemoteSession::do_target_read() {
+    _target_socket.async_receive_from(boost::asio::buffer(&_target_buff[0], _target_buff.capacity()),
+                    _target_ep, std::bind(&UdpRemoteSession::target_read_handle, shared_from_this(), _1, _2));
+}
+
+void UdpRemoteSession::target_read_handle(boost::system::error_code ec, size_t len) {
+    if (ec) {
+        LOG(ERROR) << "[UdpRemoteSession::target_read_handle][logid:" << _logid
+                   << "][ec:" << ec.message() << "] fail to read from target";
+        close_socket();
+        return;
+    }
+
+    send_to_local(len);
+}
+
+int UdpRemoteSession::send_to_local(size_t len) {
+    ::bs::BsResponse response;
+    response.set_err_no(::bs::NO_ERR);
+    response.set_err_msg("ok");
+    response.set_atyp(_req.atyp());
+    if (_target_ep.address().is_v4()) {
+        response.set_target_addr(_target_ep.address().to_v4().to_bytes().data(),
+                            _target_ep.address().to_v4().to_bytes().size());
+    } else {
+        response.set_target_addr(_target_ep.address().to_v6().to_bytes().data(),
+                            _target_ep.address().to_v6().to_bytes().size());
+    }
+    response.set_target_port(_target_ep.port());
+    response.mutable_udp_data()->append(_target_buff.data(), len);
+
+    response.SerializeToString(&_local_buff);
+    do_local_write();
+
+    return 0;
+}
+
+void UdpRemoteSession::do_local_write() {
+    _local_socket->async_send_to(boost::asio::buffer(_local_buff.data(), _local_buff.size()),
+            _local_ep, std::bind(&UdpRemoteSession::local_write_handle, shared_from_this(), _1, _2));
+}
+
+void UdpRemoteSession::local_write_handle(boost::system::error_code ec, size_t len) {
+    if (ec) {
+        LOG(ERROR) << "[UdpRemoteSession::local_write_handle][logid:" << _logid
+                   << "][ec:" << ec.message() << "] fail to read from target";
+        close_socket();
+        return;
+    }
+
+    LOG(INFO) << "[UdpRemoteSession::local_write_handle][logid:" << _logid
+              << "] send back to local sucessfully";
+    // _self_container.reset();
+}
+
+void UdpRemoteSession::close_socket() {
+    _target_socket.close();
+    // _self_container.reset();
+}
+
+RemoteServer* RemoteServer::_s_instance = nullptr;
 
 RemoteServer::RemoteServer() : _io_context(),
-    _acceptor(_io_context, tcp::endpoint(tcp::v4(), FLAGS_remote_port)) {
+        _acceptor(_io_context, tcp::endpoint(tcp::v4(), FLAGS_remote_port)),
+        _udp_socket(_io_context, udp::endpoint(udp::v4(), FLAGS_remote_port)) {
+}
+
+RemoteServer::~RemoteServer() {
+    if (_s_instance != nullptr) {
+        delete _s_instance;
+    }
 }
 
 int RemoteServer::start() {
@@ -440,6 +641,11 @@ int RemoteServer::start() {
         if (0 != ret) {
             LOG(ERROR) << "RemoteServer fail to init";
             break;
+        }
+
+        ret = do_udp_recv();
+        if (0 != ret) {
+            LOG(ERROR) << "RemoteServer fail to udp recv";
         }
 
         LOG(INFO) << "remote server start, port:" << FLAGS_remote_port << ", enjoy yourself ...";
@@ -465,6 +671,25 @@ void RemoteServer::accept_handle(boost::system::error_code ec, boost::asio::ip::
     std::make_shared<RemoteSession>(std::move(socket), &_io_context)->start();
 
     do_accept();  // need call do_accept again
+}
+
+int RemoteServer::do_udp_recv() {
+    _udp_buffer = std::string();
+    _udp_buffer.reserve(UDP_BUFF_SIZE);
+    _udp_socket.async_receive_from(boost::asio::buffer(&_udp_buffer[0], _udp_buffer.capacity()),
+                                   _sender_ep, std::bind(&RemoteServer::udp_recv_handle, this, _1, _2));
+    return 0;
+}
+
+void RemoteServer::udp_recv_handle(boost::system::error_code ec, std::size_t len) {
+    if (ec) {
+        LOG(ERROR) << "[Remoteserver::udp_recv_handle][ec:" << ec.message()
+                   << "] fail to recv udp socks5";
+        return;
+    }
+    std::make_shared<UdpRemoteSession>(&_udp_socket, &_io_context, _sender_ep, std::move(_udp_buffer), len)->start();
+
+    do_udp_recv();
 }
 
 

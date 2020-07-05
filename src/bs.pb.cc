@@ -67,6 +67,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_bs_2eproto::offsets[] PROTOBUF
   PROTOBUF_FIELD_OFFSET(::bs::BsRequest, target_addr_),
   PROTOBUF_FIELD_OFFSET(::bs::BsRequest, target_port_),
   PROTOBUF_FIELD_OFFSET(::bs::BsRequest, logid_),
+  PROTOBUF_FIELD_OFFSET(::bs::BsRequest, udp_data_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::bs::BsResponse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -77,10 +78,11 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_bs_2eproto::offsets[] PROTOBUF
   PROTOBUF_FIELD_OFFSET(::bs::BsResponse, atyp_),
   PROTOBUF_FIELD_OFFSET(::bs::BsResponse, target_addr_),
   PROTOBUF_FIELD_OFFSET(::bs::BsResponse, target_port_),
+  PROTOBUF_FIELD_OFFSET(::bs::BsResponse, udp_data_),
 };
 static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, sizeof(::bs::BsRequest)},
-  { 10, -1, sizeof(::bs::BsResponse)},
+  { 11, -1, sizeof(::bs::BsResponse)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -89,16 +91,17 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
 };
 
 const char descriptor_table_protodef_bs_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\010bs.proto\022\002bs\"m\n\tBsRequest\022\016\n\006passwd\030\001 "
+  "\n\010bs.proto\022\002bs\"\177\n\tBsRequest\022\016\n\006passwd\030\001 "
   "\001(\t\022\027\n\004atyp\030\002 \001(\0162\t.bs.AType\022\023\n\013target_a"
   "ddr\030\003 \001(\014\022\023\n\013target_port\030\004 \001(\005\022\r\n\005logid\030"
-  "\006 \001(\004\"~\n\nBsResponse\022\034\n\006err_no\030\001 \001(\0162\014.bs"
-  ".BsResErr\022\017\n\007err_msg\030\002 \001(\t\022\027\n\004atyp\030\003 \001(\016"
-  "2\t.bs.AType\022\023\n\013target_addr\030\004 \001(\014\022\023\n\013targ"
-  "et_port\030\005 \001(\005*\?\n\010BsResErr\022\n\n\006NO_ERR\020\000\022\017\n"
-  "\013AUTH_FAILED\020\001\022\026\n\022TARGET_CONNECT_ERR\020\002*;"
-  "\n\005AType\022\r\n\tATYP_NONE\020\000\022\t\n\005IP_V4\020\001\022\r\n\tDOM"
-  "AINAME\020\003\022\t\n\005IP_V6\020\004b\006proto3"
+  "\006 \001(\004\022\020\n\010udp_data\030\007 \001(\014\"\220\001\n\nBsResponse\022\034"
+  "\n\006err_no\030\001 \001(\0162\014.bs.BsResErr\022\017\n\007err_msg\030"
+  "\002 \001(\t\022\027\n\004atyp\030\003 \001(\0162\t.bs.AType\022\023\n\013target"
+  "_addr\030\004 \001(\014\022\023\n\013target_port\030\005 \001(\005\022\020\n\010udp_"
+  "data\030\006 \001(\014*\?\n\010BsResErr\022\n\n\006NO_ERR\020\000\022\017\n\013AU"
+  "TH_FAILED\020\001\022\026\n\022TARGET_CONNECT_ERR\020\002*;\n\005A"
+  "Type\022\r\n\tATYP_NONE\020\000\022\t\n\005IP_V4\020\001\022\r\n\tDOMAIN"
+  "AME\020\003\022\t\n\005IP_V6\020\004b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_bs_2eproto_deps[1] = {
 };
@@ -109,7 +112,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_bs_
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_bs_2eproto_once;
 static bool descriptor_table_bs_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_bs_2eproto = {
-  &descriptor_table_bs_2eproto_initialized, descriptor_table_protodef_bs_2eproto, "bs.proto", 387,
+  &descriptor_table_bs_2eproto_initialized, descriptor_table_protodef_bs_2eproto, "bs.proto", 424,
   &descriptor_table_bs_2eproto_once, descriptor_table_bs_2eproto_sccs, descriptor_table_bs_2eproto_deps, 2, 0,
   schemas, file_default_instances, TableStruct_bs_2eproto::offsets,
   file_level_metadata_bs_2eproto, 2, file_level_enum_descriptors_bs_2eproto, file_level_service_descriptors_bs_2eproto,
@@ -175,6 +178,10 @@ BsRequest::BsRequest(const BsRequest& from)
   if (!from._internal_target_addr().empty()) {
     target_addr_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.target_addr_);
   }
+  udp_data_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_udp_data().empty()) {
+    udp_data_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.udp_data_);
+  }
   ::memcpy(&atyp_, &from.atyp_,
     static_cast<size_t>(reinterpret_cast<char*>(&logid_) -
     reinterpret_cast<char*>(&atyp_)) + sizeof(logid_));
@@ -185,6 +192,7 @@ void BsRequest::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_BsRequest_bs_2eproto.base);
   passwd_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   target_addr_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  udp_data_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   ::memset(&atyp_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&logid_) -
       reinterpret_cast<char*>(&atyp_)) + sizeof(logid_));
@@ -198,6 +206,7 @@ BsRequest::~BsRequest() {
 void BsRequest::SharedDtor() {
   passwd_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   target_addr_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  udp_data_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void BsRequest::SetCachedSize(int size) const {
@@ -217,6 +226,7 @@ void BsRequest::Clear() {
 
   passwd_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   target_addr_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  udp_data_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   ::memset(&atyp_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&logid_) -
       reinterpret_cast<char*>(&atyp_)) + sizeof(logid_));
@@ -266,6 +276,14 @@ const char* BsRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::
       case 6:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 48)) {
           logid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // bytes udp_data = 7;
+      case 7:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 58)) {
+          auto str = _internal_mutable_udp_data();
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -330,6 +348,12 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(6, this->_internal_logid(), target);
   }
 
+  // bytes udp_data = 7;
+  if (this->udp_data().size() > 0) {
+    target = stream->WriteBytesMaybeAliased(
+        7, this->_internal_udp_data(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields(), target, stream);
@@ -358,6 +382,13 @@ size_t BsRequest::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_target_addr());
+  }
+
+  // bytes udp_data = 7;
+  if (this->udp_data().size() > 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
+        this->_internal_udp_data());
   }
 
   // .bs.AType atyp = 2;
@@ -419,6 +450,10 @@ void BsRequest::MergeFrom(const BsRequest& from) {
 
     target_addr_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.target_addr_);
   }
+  if (from.udp_data().size() > 0) {
+
+    udp_data_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.udp_data_);
+  }
   if (from.atyp() != 0) {
     _internal_set_atyp(from._internal_atyp());
   }
@@ -455,6 +490,8 @@ void BsRequest::InternalSwap(BsRequest* other) {
     GetArenaNoVirtual());
   target_addr_.Swap(&other->target_addr_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
+  udp_data_.Swap(&other->udp_data_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+    GetArenaNoVirtual());
   swap(atyp_, other->atyp_);
   swap(target_port_, other->target_port_);
   swap(logid_, other->logid_);
@@ -490,6 +527,10 @@ BsResponse::BsResponse(const BsResponse& from)
   if (!from._internal_target_addr().empty()) {
     target_addr_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.target_addr_);
   }
+  udp_data_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_udp_data().empty()) {
+    udp_data_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.udp_data_);
+  }
   ::memcpy(&err_no_, &from.err_no_,
     static_cast<size_t>(reinterpret_cast<char*>(&target_port_) -
     reinterpret_cast<char*>(&err_no_)) + sizeof(target_port_));
@@ -500,6 +541,7 @@ void BsResponse::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_BsResponse_bs_2eproto.base);
   err_msg_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   target_addr_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  udp_data_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   ::memset(&err_no_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&target_port_) -
       reinterpret_cast<char*>(&err_no_)) + sizeof(target_port_));
@@ -513,6 +555,7 @@ BsResponse::~BsResponse() {
 void BsResponse::SharedDtor() {
   err_msg_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   target_addr_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  udp_data_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void BsResponse::SetCachedSize(int size) const {
@@ -532,6 +575,7 @@ void BsResponse::Clear() {
 
   err_msg_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   target_addr_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  udp_data_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   ::memset(&err_no_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&target_port_) -
       reinterpret_cast<char*>(&err_no_)) + sizeof(target_port_));
@@ -582,6 +626,14 @@ const char* BsResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID:
       case 5:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 40)) {
           target_port_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // bytes udp_data = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 50)) {
+          auto str = _internal_mutable_udp_data();
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -647,6 +699,12 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(5, this->_internal_target_port(), target);
   }
 
+  // bytes udp_data = 6;
+  if (this->udp_data().size() > 0) {
+    target = stream->WriteBytesMaybeAliased(
+        6, this->_internal_udp_data(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields(), target, stream);
@@ -675,6 +733,13 @@ size_t BsResponse::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_target_addr());
+  }
+
+  // bytes udp_data = 6;
+  if (this->udp_data().size() > 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
+        this->_internal_udp_data());
   }
 
   // .bs.BsResErr err_no = 1;
@@ -735,6 +800,10 @@ void BsResponse::MergeFrom(const BsResponse& from) {
 
     target_addr_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.target_addr_);
   }
+  if (from.udp_data().size() > 0) {
+
+    udp_data_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.udp_data_);
+  }
   if (from.err_no() != 0) {
     _internal_set_err_no(from._internal_err_no());
   }
@@ -770,6 +839,8 @@ void BsResponse::InternalSwap(BsResponse* other) {
   err_msg_.Swap(&other->err_msg_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
   target_addr_.Swap(&other->target_addr_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+    GetArenaNoVirtual());
+  udp_data_.Swap(&other->udp_data_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
   swap(err_no_, other->err_no_);
   swap(atyp_, other->atyp_);

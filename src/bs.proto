@@ -20,6 +20,7 @@ message BsRequest {
     bytes target_addr = 3;
     int32 target_port = 4;
     uint64 logid = 6;
+    bytes udp_data = 7;  // used in udp-base
 };
 
 message BsResponse {
@@ -28,4 +29,5 @@ message BsResponse {
     AType atyp = 3;
     bytes target_addr = 4;
     int32 target_port = 5;
+    bytes udp_data = 6;  // used in udp-base
 };

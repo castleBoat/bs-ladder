@@ -11,8 +11,13 @@ namespace bs {
 
 class RemoteServer {
 public:
+    ~RemoteServer();
+
     static RemoteServer& instance() {
-        return _s_instance;
+        if (_s_instance == nullptr) {
+            _s_instance = new RemoteServer();
+        }
+        return *_s_instance;
     }
 
     int start();
@@ -23,11 +28,19 @@ private:
 
     void accept_handle(boost::system::error_code ec, boost::asio::ip::tcp::socket socket);
 
+    int do_udp_recv();
+
+    void udp_recv_handle(boost::system::error_code ec, std::size_t len);
+
 private:
     boost::asio::io_context _io_context;
     boost::asio::ip::tcp::acceptor _acceptor;
 
-    static RemoteServer _s_instance;
+    boost::asio::ip::udp::socket _udp_socket;
+    std::string _udp_buffer;
+    boost::asio::ip::udp::endpoint _sender_ep;
+
+    static RemoteServer* _s_instance;
 };
 
 }  // namespace bs

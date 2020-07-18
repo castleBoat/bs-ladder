@@ -13,6 +13,10 @@ extern std::string gen_sn();
 
 extern std::size_t gen_logid();
 
+extern void encrpt(uint8_t* data, size_t len);
+
+extern void decrpt(uint8_t* data, size_t len);
+
 }
 
 #endif //BLACKSHEEP_UTILITY_H

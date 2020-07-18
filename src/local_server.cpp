@@ -27,22 +27,19 @@ public:
     Session(tcp::socket socket, boost::asio::io_context* io_context) :
             _io_context(io_context), _socket(std::move(socket)), _remote_socket(*io_context),
             _state(SOCKS_AUTH), _real_target_atyp(bs::ATYP_NONE), _real_target_port(0),
-            _local_read_buff(DEFAULT_BUFF_SIZE), _local_read_len(0),
-            _local_write_len(0),
-            _remote_read_buff(DEFAULT_BUFF_SIZE), _remote_read_len(0),
-            _remote_write_len(0), _forward_to_local_fin(true), _forward_to_remote_fin(true),
-            _logid(gen_logid()), _socks5(_logid) {
-        _local_write_buff.reserve(DEFAULT_BUFF_SIZE);
-        _remote_write_buff.reserve(DEFAULT_BUFF_SIZE);
+            _socks5(_logid), _logid(gen_logid()), _local_write_len(0), _remote_write_len(0),
+            _local_write_data(nullptr), _remote_write_data(nullptr) {
+        _local_buff.reserve(DEFAULT_BUFF_SIZE);
+        _remote_buff.reserve(DEFAULT_BUFF_SIZE);
 
-        LOG(INFO) << "[Session::Session][logid:" << _logid << "]";
+        LOG(INFO) << "[Session::Session][logid:" << _logid << "][_local_buff.capacity():" << _local_buff.capacity();
     }
 
     int start();
 private:
     void do_local_read();
 
-    void do_local_write();
+    void do_local_write(const char* data, std::size_t len);
 
     void local_read_handle(boost::system::error_code ec, std::size_t len);
 
@@ -54,7 +51,7 @@ private:
 
     int connect_remote();
 
-    void do_remote_write();
+    void do_remote_write(const char* data, std::size_t len);
 
     void do_remote_read();
 
@@ -94,18 +91,13 @@ private:
     std::string _real_target_addr;
     int _real_target_port;
 
-    std::vector<char> _local_read_buff;
-    size_t _local_read_len;
-    std::string _local_write_buff;
-    size_t _local_write_len;
+    std::string _local_buff;
+    const char* _local_write_data;
+    std::size_t _local_write_len;
 
-    std::vector<char> _remote_read_buff;
-    size_t _remote_read_len;
-    std::string _remote_write_buff;
-    size_t _remote_write_len;
-
-    bool _forward_to_remote_fin;
-    bool _forward_to_local_fin;
+    std::string _remote_buff;
+    const char* _remote_write_data;
+    std::size_t _remote_write_len;
 
     std::size_t _logid;
 };
@@ -119,14 +111,16 @@ int Session::start() {
 
 void Session::do_local_read() {
     _socket.async_read_some(
-        boost::asio::buffer(&_local_read_buff[_local_read_len], _local_read_buff.size() - _local_read_len),
+        boost::asio::buffer(&_local_buff[0], _local_buff.capacity()),
         std::bind(&Session::local_read_handle, shared_from_this(), _1, _2));
 }
 
-void Session::do_local_write() {
+void Session::do_local_write(const char* data, std::size_t len) {
     _socket.async_write_some(
-            boost::asio::buffer(_local_write_buff.data(), _local_write_buff.size()),
+            boost::asio::buffer(data, len),
             std::bind(&Session::local_write_handle, shared_from_this(), _1, _2));
+    _local_write_data = data;
+    _local_write_len = len;
 }
 
 void Session::local_read_handle(boost::system::error_code ec, std::size_t len) {
@@ -138,21 +132,16 @@ void Session::local_read_handle(boost::system::error_code ec, std::size_t len) {
         return;
     }
 
-    _local_read_len += len;
-
     int ret = 0;
-    int processed_len = 0;
-    while (processed_len < _local_read_len) {
+    do {
         if (SOCKS_AUTH == _state) {
             LOG(INFO) << "[Session::local_read_handle][logid:" << _logid
                 << "][state:SOCKS_AUTH][len:" << len << "]";
-            int res = _socks5.try_parse_auth(
-                    &_local_read_buff[processed_len], _local_read_len - processed_len);
+            int res = _socks5.try_parse_auth(_local_buff.data(), len);
             if (res != 0) {
                 break;
             }
-            int consume_len = _socks5.auth_process(&_local_read_buff[processed_len],
-                                                   _local_read_len - processed_len);
+            int consume_len = _socks5.auth_process(_local_buff.data(), len);
             if (consume_len < 0) {
                 // TODO 这里 socks 认证失败也需要 response
                 LOG(ERROR) << "[local_read_handle] fail to auth_process";
@@ -163,19 +152,18 @@ void Session::local_read_handle(boost::system::error_code ec, std::size_t len) {
             }
 
             socks_auth_response();
-            processed_len += consume_len;
             break;
         } else if (SOCKS_CONNECTING == _state) {
             LOG(INFO) << "[Session::local_read_handle][logid:" << _logid
                 << "][state:SOCKS_CONNECTING][len:" << len << "]";
-            int res = _socks5.try_parse_req(&_local_read_buff[processed_len], _local_read_len - processed_len);
+            int res = _socks5.try_parse_req(_local_buff.data(), len);
             if (res != 0) {
                 LOG(INFO) << "[Session::local_read_handle] SOCKS_CONNECTING not enough data";
                 ret = -1;
                 break;
             }
 
-            int consume_len = _socks5.req_process(&_local_read_buff[processed_len], _local_read_len - processed_len);
+            int consume_len = _socks5.req_process(_local_buff.data(), len);
             if (consume_len < 0) {
                 LOG(ERROR) << "[Session::local_read_handle] fail to req process,"
                           << " response local error response";
@@ -185,41 +173,19 @@ void Session::local_read_handle(boost::system::error_code ec, std::size_t len) {
                 break;
             }
 
-            processed_len += consume_len;
-
             connect_remote();
-            break;
-
-            // TODO 但是这里又不能 wait 阻塞住
-            // 验证 remote 的回复， remote 正常连接上 target server 了。
-            // 发送 Socks 连接的 response
-            // socks_req_response();
-
-            // _state = REMOTE_CONNECTED;
         } else if (REMOTE_FORWARD == _state) {
             // 与 remote server 的连接已经建立，这是正式数据
             LOG(INFO) << "[Session::local_read_handle][logid:" << _logid
                 << "][state:REMOTE_FORWARD][len:" << len << "]";
-            _remote_write_buff.clear();
-            _remote_write_buff.append(&_local_read_buff[processed_len], _local_read_len - processed_len);
-            do_remote_write();
-            _forward_to_remote_fin = false;
-            processed_len = _local_read_len;
+            do_remote_write(_local_buff.data(), len);
         }
-    }
+    } while (false);
 
-    LOG(INFO) << "[Session::local_read_handle][logid:" << _logid
-        << "][processed_len:" << processed_len << "]";
     if (ret != 0) {
+        close_socket();
         return;
     }
-
-    if (0 < processed_len && processed_len < _local_read_len) {
-        memmove(&_local_read_buff[0], &_local_read_buff[processed_len], _local_read_len - processed_len);
-    }
-    _local_read_len -= processed_len;
-
-    // do_local_read();
 }
 
 void Session::local_write_handle(boost::system::error_code ec, std::size_t len) {
@@ -230,7 +196,12 @@ void Session::local_write_handle(boost::system::error_code ec, std::size_t len) 
         return;
     }
     LOG(INFO) << "[Session::local_write_handle][logid:" << _logid
-        << "][len:" << len << "]";
+              << "][should write len:" << _local_write_len << "][len:" << len << "]";
+    if (len < _local_write_len) {
+        // keep write when don't write all data
+        do_local_write(_local_write_data + len, _local_write_len - len);
+        return;
+    }
 
     if (_state == SOCKS_AUTH) {
         _state = SOCKS_CONNECTING;
@@ -242,34 +213,28 @@ void Session::local_write_handle(boost::system::error_code ec, std::size_t len) 
         do_local_read();
         do_remote_read();
     } else if (_state == REMOTE_FORWARD) {
-        // do_remote_read();
-        if (!_forward_to_local_fin) {
-            _forward_to_local_fin = true;
-            do_remote_read();
-        }
+        do_remote_read();
     }
-
-    // do_local_read();
 }
 
 int Session::socks_auth_response() {
-    _local_write_buff.clear();
-    _socks5.response_auth(_local_write_buff);
+    _local_buff.clear();
+    _socks5.response_auth(_local_buff);
 
     LOG(INFO) << "[socks_auth_response][logid:" << _logid
-        << "][ver:" << (int)_local_write_buff[0] << "][method:" << (int)_local_write_buff[1]
+        << "][ver:" << (int)_local_buff[0] << "][method:" << (int)_local_buff[1]
         << "] send socks5 auth response";
 
-    do_local_write();
+    do_local_write(_local_buff.data(), _local_buff.size());
     return 0;
 }
 
 int Session::socks_req_response(Socks5::REP res_err) {
-    _local_write_buff.clear();
+    _local_buff.clear();
     _socks5.set_rep(res_err);
-    _socks5.req_response(_local_write_buff);
+    _socks5.req_response(_local_buff);
 
-    do_local_write();
+    do_local_write(_local_buff.data(), _local_buff.size());
     return 0;
 }
 
@@ -289,14 +254,16 @@ int Session::connect_remote() {
     return 0;
 }
 
-void Session::do_remote_write() {
-    _remote_socket.async_write_some(boost::asio::buffer(_remote_write_buff.data(), _remote_write_buff.size()),
+void Session::do_remote_write(const char* data, std::size_t len) {
+    _remote_socket.async_write_some(boost::asio::buffer(data, len),
                                     std::bind(&Session::remote_write_handle, shared_from_this(), _1, _2));
+    _remote_write_data = data;
+    _remote_write_len = len;
 }
 
 void Session::do_remote_read() {
     _remote_socket.async_read_some(
-            boost::asio::buffer(&_remote_read_buff[_remote_read_len], _remote_read_buff.size() - _remote_read_len),
+            boost::asio::buffer(&_remote_buff[0], _remote_buff.capacity()),
             std::bind(&Session::remote_read_handle, shared_from_this(), _1, _2));
 }
 
@@ -315,7 +282,8 @@ void Session::remote_connect_handle(boost::system::error_code ec) {
     _state = REMOTE_CONNECTED;
 
     prepare_request();
-    do_remote_write();
+    encrpt((uint8_t*)_remote_buff.data(), _remote_buff.size());
+    do_remote_write(_remote_buff.data(), _remote_buff.size());
 }
 
 void Session::remote_write_handle(boost::system::error_code ec, size_t len) {
@@ -328,16 +296,17 @@ void Session::remote_write_handle(boost::system::error_code ec, size_t len) {
         return;
     }
     LOG(INFO) << "[Session::remote_write_handle][logid:" << _logid
-        << "][len:" << len << "]";
+        << "][should write len:" << _remote_write_len << "][len:" << len << "]";
+    if (len < _remote_write_len) {
+        // keep write when don't write all data
+        do_remote_write(_remote_write_data + len, _remote_write_len - len);
+        return;
+    }
 
     if (_state == REMOTE_CONNECTED) {
         _state = REMOTE_AUTH;
         do_remote_read();
-    }
-
-    // do_remote_read();
-    if (!_forward_to_remote_fin) {
-        _forward_to_remote_fin = true;
+    } else {
         do_local_read();
     }
 }
@@ -355,10 +324,10 @@ int Session::prepare_request() {
     req.SerializeToString(&ser_str);
     int32_t len = 1 + ser_str.size();
 
-    _remote_write_buff.clear();
-    _remote_write_buff.append((char*)&len, sizeof(len));
-    _remote_write_buff.push_back(type);
-    _remote_write_buff.append(ser_str.data(), ser_str.size());
+    _remote_buff.clear();
+    _remote_buff.append((char*)&len, sizeof(len));
+    _remote_buff.push_back(type);
+    _remote_buff.append(ser_str.data(), ser_str.size());
 
     return 0;
 }
@@ -373,26 +342,27 @@ void Session::remote_read_handle(boost::system::error_code ec, size_t len) {
         return;
     }
 
-    _remote_read_len += len;
-
     int ret = 0;
-    int processed_len = 0;
-    while (processed_len < _remote_read_len) {
+    do {
         if (REMOTE_AUTH == _state) {
             LOG(INFO) << "[Session::remote_read_handle][logid:" << _logid
                 << "][state:REMOTE_AUTH][len:" << len << "]";
-            if (_remote_read_len - processed_len < sizeof(int32_t) + 1) {
-                LOG(ERROR) << "[Session::remote_handle] not enough data";
-                // keep read
+            if (len < sizeof(int32_t)) {
+                LOG(ERROR) << "[Session::remote_read_handle][logid:" << _logid
+                          << "][state:REMOTE_AUTH][len:" << len << "] not enough data";
+                ret = -1;
                 break;
             }
+            decrpt((uint8_t*)_remote_buff.data(), len);
+
             int32_t param_len = 0;
-            memcpy(&param_len, &_remote_read_buff[processed_len], sizeof(int32_t));
-            if (_remote_read_len - processed_len - sizeof(int32_t) < param_len) {
-                LOG(ERROR) << "[Session::remote_read_handle] not enough data";
+            memcpy(&param_len, _remote_buff.data(), sizeof(int32_t));
+            if (len - sizeof(int32_t) < param_len) {
+                LOG(ERROR) << "[Session::remote_read_handle][logid:" << _logid
+                           << "][state:REMOTE_AUTH][len:" << len << "] not enough data";
                 break;
             }
-            int consume_len = process_remote_param(&_remote_read_buff[processed_len], sizeof(int32_t) + param_len);
+            int consume_len = process_remote_param(_remote_buff.data(), len);
             if (consume_len < 0) {
                 // remote auth failed
                 socks_req_response(Socks5::HOST_UNREACHABLE);
@@ -401,33 +371,20 @@ void Session::remote_read_handle(boost::system::error_code ec, size_t len) {
             }
 
             socks_req_response();
-
-            processed_len += consume_len;
         } else if (REMOTE_FORWARD == _state) {
             // forward to local socket
             LOG(INFO) << "[Session::remote_read_handle][logid:" << _logid
                 << "][state:REMOTE_FORWARD][len:" << len << "]";
-            _local_write_buff.clear();
-            _local_write_buff.append(&_remote_read_buff[processed_len], _remote_read_len - processed_len);
-            do_local_write();
-            _forward_to_local_fin = false;
-
-            processed_len = _remote_read_len;
+            do_local_write(_remote_buff.data(), len);
         }
-    }
+    } while (false);
 
     LOG(INFO) << "[Session::remote_read_handle][logid:" << _logid
-        << "][processed_len:" << processed_len << "]";
+        << "][len:" << len << "]";
     if (ret != 0) {
+        close_socket();
         return;
     }
-
-    if (0 < processed_len && processed_len < _remote_read_len) {
-        memmove(&_remote_read_buff[0], &_remote_read_buff[processed_len], _remote_read_len - processed_len);
-    }
-    _remote_read_len -= processed_len;
-
-    // do_remote_read();
 }
 
 int Session::process_remote_param(const char* data, size_t len) {

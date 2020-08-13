@@ -14,10 +14,8 @@ public:
     ~RemoteServer();
 
     static RemoteServer& instance() {
-        if (_s_instance == nullptr) {
-            _s_instance = new RemoteServer();
-        }
-        return *_s_instance;
+        static RemoteServer _s_instance;
+        return _s_instance;
     }
 
     int start();
@@ -40,7 +38,7 @@ private:
     std::string _udp_buffer;
     boost::asio::ip::udp::endpoint _sender_ep;
 
-    static RemoteServer* _s_instance;
+    // static RemoteServer* _s_instance;
 };
 
 }  // namespace bs

@@ -608,17 +608,12 @@ void UdpRemoteSession::close_socket() {
     // _self_container.reset();
 }
 
-RemoteServer* RemoteServer::_s_instance = nullptr;
-
 RemoteServer::RemoteServer() : _io_context(),
         _acceptor(_io_context, tcp::endpoint(tcp::v4(), FLAGS_remote_port)),
         _udp_socket(_io_context, udp::endpoint(udp::v4(), FLAGS_remote_port)) {
 }
 
 RemoteServer::~RemoteServer() {
-    if (_s_instance != nullptr) {
-        delete _s_instance;
-    }
 }
 
 int RemoteServer::start() {

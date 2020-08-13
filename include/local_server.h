@@ -15,10 +15,8 @@ public:
     ~LocalServer();
 
     static LocalServer& instance() {
-        if (_s_instance == nullptr) {
-            _s_instance = new LocalServer();
-        }
-        return *_s_instance;
+        static LocalServer _s_instance;
+        return _s_instance;
     }
 
     int start();
@@ -40,8 +38,6 @@ private:
     boost::asio::ip::udp::socket _udp_socket;
     std::string _udp_buffer;
     boost::asio::ip::udp::endpoint _sender_ep;
-
-    static LocalServer* _s_instance;
 };
 
 }  // namesapce bs

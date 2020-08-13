@@ -616,17 +616,12 @@ void UdpSession::close_socket() {
     // _self_container.reset();
 }
 
-LocalServer* LocalServer::_s_instance = nullptr;
-
 LocalServer::LocalServer() : _io_context(),
     _acceptor(_io_context, tcp::endpoint(tcp::v4(), FLAGS_local_port)),
     _udp_socket(_io_context, udp::endpoint(udp::v4(), FLAGS_local_port)) {
 }
 
 LocalServer::~LocalServer() {
-    if (_s_instance != nullptr) {
-        delete _s_instance;
-    }
 }
 
 int LocalServer::start() {

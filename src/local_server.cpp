@@ -116,11 +116,12 @@ void Session::do_local_read() {
 }
 
 void Session::do_local_write(const char* data, std::size_t len) {
+    assert(data != nullptr && len > 0);
+    _local_write_data = data;
+    _local_write_len = len;
     _socket.async_write_some(
             boost::asio::buffer(data, len),
             std::bind(&Session::local_write_handle, shared_from_this(), _1, _2));
-    _local_write_data = data;
-    _local_write_len = len;
 }
 
 void Session::local_read_handle(boost::system::error_code ec, std::size_t len) {
@@ -255,10 +256,11 @@ int Session::connect_remote() {
 }
 
 void Session::do_remote_write(const char* data, std::size_t len) {
-    _remote_socket.async_write_some(boost::asio::buffer(data, len),
-                                    std::bind(&Session::remote_write_handle, shared_from_this(), _1, _2));
+    assert(data != nullptr && len > 0);
     _remote_write_data = data;
     _remote_write_len = len;
+    _remote_socket.async_write_some(boost::asio::buffer(data, len),
+                                    std::bind(&Session::remote_write_handle, shared_from_this(), _1, _2));
 }
 
 void Session::do_remote_read() {

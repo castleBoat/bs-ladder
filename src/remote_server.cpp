@@ -282,10 +282,11 @@ void RemoteSession::do_local_read() {
 }
 
 void RemoteSession::do_local_write(const char* data, std::size_t len) {
-    _socket.async_write_some(boost::asio::buffer(data, len),
-            std::bind(&RemoteSession::local_write_handle, shared_from_this(), _1, _2));
+    assert(data != nullptr && len > 0);
     _local_write_data = data;
     _local_write_len = len;
+    _socket.async_write_some(boost::asio::buffer(data, len),
+            std::bind(&RemoteSession::local_write_handle, shared_from_this(), _1, _2));
 }
 
 void RemoteSession::do_target_read() {
@@ -294,10 +295,11 @@ void RemoteSession::do_target_read() {
 }
 
 void RemoteSession::do_target_write(const char* data, std::size_t len) {
-    _target_socket.async_write_some(boost::asio::buffer(data, len),
-            std::bind(&RemoteSession::target_write_handle, shared_from_this(), _1, _2));
+    assert(data != nullptr && len > 0);
     _target_write_data = data;
     _target_write_len = len;
+    _target_socket.async_write_some(boost::asio::buffer(data, len),
+            std::bind(&RemoteSession::target_write_handle, shared_from_this(), _1, _2));
 }
 
 void RemoteSession::local_write_handle(boost::system::error_code ec, std::size_t len) {
@@ -371,9 +373,7 @@ void RemoteSession::target_read_handle(boost::system::error_code ec, size_t len)
         << "][len:" << len << "]";
     assert(_state == TARGET_FORWARD);
 
-    _local_buff.clear();
-    _local_buff.append(_target_buff.data(), len);
-    do_local_write(_local_buff.data(), _local_buff.size());
+    do_local_write(_target_buff.data(), len);
 }
 
 void RemoteSession::target_write_handle(boost::system::error_code ec, size_t len) {
